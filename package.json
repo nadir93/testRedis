@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "redisGateWay.js",
   "dependencies": {
+    "bunyan": "^1.8.9",
     "ioredis": "^2.5.0",
     "restify": "^4.3.0"
   },
