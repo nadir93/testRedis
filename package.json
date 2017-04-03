@@ -1,0 +1,19 @@
+{
+  "name": "redistest",
+  "version": "1.0.0",
+  "main": "redisGateWay.js",
+  "dependencies": {
+    "ioredis": "^2.5.0",
+    "restify": "^4.3.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "directories": {
+    "test": "test"
+  },
+  "description": ""
+}
