@@ -22,5 +22,6 @@ const handle = {};
 handle['/get'] = requestHandlers.get;
 handle['/set'] = requestHandlers.set;
 handle['/sortedset'] = requestHandlers.sortedset;
+handle['/available'] = requestHandlers.available;
 
 server.start(router.route, handle);

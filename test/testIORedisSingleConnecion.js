@@ -17,8 +17,8 @@ const j = schedule.scheduleJob('*/1 * * * * *', function() {
   //responseTimeSum = 0;
 });
 
-const host = '192.168.0.103';
-const port = 6382;
+const host = '127.0.0.1';
+const port = 32770;
 const Redis = require('ioredis');
 const redis = new Redis(port, host);
 

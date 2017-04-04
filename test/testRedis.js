@@ -5,7 +5,7 @@
 'use strict';
 const restify = require('restify');
 const Redis = require('ioredis');
-const loglevel = 'info';
+const loglevel = 'debug';
 const Logger = require('bunyan');
 const log = new Logger.createLogger({
   name: 'testRedis',
@@ -20,8 +20,8 @@ let receivedMsgCnt = 0;
 let responseTimeSum = 0;
 const loopCount = 100000;
 const clientCount = 1;
-const host = '192.168.0.103';
-const port = 6382;
+const host = '127.0.0.1';
+const port = 32770;
 const payload = '012345678901234567890123456789012345678901234567' +
   '8901234567890123456789012345678901234567890123456789';
 
