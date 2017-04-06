@@ -14,8 +14,8 @@ const log = new Logger.createLogger({
   }
 });
 const Redis = require('ioredis');
-const host = '127.0.0.1';
-const port = 6379;
+const host = '192.168.0.103';
+const port = 6382;
 const server = require('./lib/server');
 const router = require('./lib/router');
 //const requestHandlers = require('./lib/requestHandlers');
