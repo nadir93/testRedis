@@ -50,11 +50,22 @@ redis.on('end', function() {
 });
 
 function getData(cb) {
-  redis.get('getTestKey', function(err, result) {
-    //log.debug(result);
-    receivedMsgCnt++;
-    cb();
-  });
+  // redis.get('getTestKey', function(err, result) {
+  //   //log.debug(result);
+  //   receivedMsgCnt++;
+  //   cb();
+  // });
+  redis.exists('active:/test/url:user001')
+    .then(result => {
+      return redis.expire('active:/test/url:user001', 100);
+    })
+    .then(() => {
+      receivedMsgCnt++;
+      cb();
+    })
+    .catch(e => {
+      log.error(e);
+    });
 }
 
 function doAsync(fn, iterations, concurrency, next) {
