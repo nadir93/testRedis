@@ -1,4 +1,4 @@
-const loglevel = 'debug';
+const loglevel = 'info';
 const Logger = require('bunyan');
 const log = new Logger.createLogger({
   name: 'testSingle',
@@ -23,43 +23,95 @@ const Redis = require('ioredis');
 const redis = new Redis(port, host);
 
 redis.on('connect', function() {
-  log.debug('redis connect');
+  log.info('redis connect');
 });
 
 redis.on('ready', function() {
-  log.debug('redis ready');
-  doAsync(getData, 5000000, 300, function(count) {
-    log.debug('end count: ', count);
-  });
+  log.info('redis ready');
+  init()
+    .then(() => {
+      //doAsync(getData, 1, 1, function(count) { // run once
+      doAsync(getData, 5000000, 300, function(count) {
+        log.info('loop end count: ', count);
+        j.cancel();
+        release()
+          .then(() => {
+            process.exit();
+          });
+      });
+    })
+    .catch(e => {
+      log.error(e);
+    });
 });
 
 redis.on('error', function(error) {
-  log.debug(error);
+  log.error(error);
 });
 
 redis.on('close', function() {
-  log.debug('redis close');
+  log.info('redis close');
 });
 
 redis.on('reconnecting', function(event) {
-  log.debug('reconnecting event: ', event);
+  log.info('reconnecting event: ', event);
 });
 
 redis.on('end', function() {
-  log.debug('redis end');
+  log.info('redis end');
 });
 
+function init() {
+  return new Promise((resolve, reject) => {
+    redis.pipeline()
+      .set('waiting:/test/url:user001', '123')
+      .sadd('activeQ:/test/url', 'user001')
+      .zadd('waitingQ:/test/url', '123', 'user001')
+      .exec()
+      .then(result => {
+        log.info('init result: ', result);
+        resolve();
+      })
+      .catch(e => {
+        log.error(e);
+        reject();
+      });
+  });
+}
+
+function release() {
+  return new Promise((resolve, reject) => {
+    redis.pipeline()
+      .del('waiting:/test/url:user001')
+      //.del('activeQ:/test/url')
+      //.del('waitingQ:/test/url')
+      .exec()
+      .then(result => {
+        log.info('release result: ', result);
+        resolve();
+      })
+      .catch(e => {
+        log.error(e);
+        reject();
+      });
+  });
+}
+
 function getData(cb) {
-  // redis.get('getTestKey', function(err, result) {
-  //   //log.debug(result);
-  //   receivedMsgCnt++;
-  //   cb();
-  // });
-  redis.exists('active:/test/url:user001')
+  redis.pipeline()
+    .exists('active:/test/url:user001')
+    .scard('activeQ:/test/url')
+    .exists('waiting:/test/url:user001')
+    .expire('waiting:/test/url:user001', 100)
+    .zcard('waitingQ:/test/url')
+    .zrank('waitingQ:/test/url', 'user001')
+    .exec()
     .then(result => {
-      return redis.expire('active:/test/url:user001', 100);
+      log.debug('pipeline result: ', result);
+      return redis.zadd('waitingQ:/test/url', +new Date(), 'user001');
     })
-    .then(() => {
+    .then(result => {
+      log.debug('result: ', result);
       receivedMsgCnt++;
       cb();
     })
@@ -69,7 +121,7 @@ function getData(cb) {
 }
 
 function doAsync(fn, iterations, concurrency, next) {
-  log.debug('start');
+  log.debug('loop start');
   var running = pending = iterations;
 
   function iterate() {

@@ -97,53 +97,6 @@ function release() {
   });
 }
 
-// function getData(cb) {
-//   redis.exists('active:/test/url:user001')
-//     .then(result => {
-//       log.debug('key exists result: ', result);
-//       return redis.scard('activeQ:/test/url');
-//     })
-//     .then(result => {
-//       log.debug('scard result: ', result);
-//       return redis.exists('waiting:/test/url:user001');
-//     })
-//     .then(result => {
-//       log.debug('key exists result: ', result);
-//       return redis.pipeline()
-//         .expire('waiting:/test/url:user001', 100)
-//         .zcard('waitingQ:/test/url')
-//         .zrank('waitingQ:/test/url', 'user001')
-//         .exec();
-//     })
-//     .then(result => {
-//       log.debug('pipeline result: ', result);
-//       receivedMsgCnt++;
-//       cb();
-//     })
-//     .catch(e => {
-//       log.error(e);
-//     });
-// }
-
-// function getData(cb) {
-//   redis.pipeline()
-//     .exists('active:/test/url:user001')
-//     .scard('activeQ:/test/url')
-//     .exists('waiting:/test/url:user001')
-//     .expire('waiting:/test/url:user001', 100)
-//     .zcard('waitingQ:/test/url')
-//     .zrank('waitingQ:/test/url', 'user001')
-//     .exec()
-//     .then(result => {
-//       log.debug('pipeline result: ', result);
-//       receivedMsgCnt++;
-//       cb();
-//     })
-//     .catch(e => {
-//       log.error(e);
-//     });
-// }
-
 function getData(cb) {
   redis.pipeline()
     .exists('active:/test/url:user001')
