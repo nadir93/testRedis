@@ -1,26 +1,19 @@
-/**
- * Author @nadir93
- * Date 2017.4.2
- */
-'use strict';
-
 const loglevel = 'debug';
 const Logger = require('bunyan');
 const log = new Logger.createLogger({
-  name: 'index',
+  name: 'testLua',
   level: loglevel,
   serializers: {
     req: Logger.stdSerializers.req
   }
 });
-const Redis = require('ioredis');
+
 const host = '127.0.0.1';
 const port = 6379;
-const server = require('./lib/server');
-const router = require('./lib/router');
-//const requestHandlers = require('./lib/requestHandlers');
+const Redis = require('ioredis');
 const redis = new Redis(port, host);
 
+// This will define a command echo:
 redis.defineCommand('check_waiting', {
   numberOfKeys: 4,
   lua: 'if redis.call("exists", KEYS[1]) == 1 then ' +
@@ -28,7 +21,7 @@ redis.defineCommand('check_waiting', {
     '   else ' +
     '     local activeq_size = redis.call("scard", KEYS[2]) ' +
     '     local waitingq_size = redis.call("zcard", KEYS[3]) ' +
-    '     if activeq_size < tonumber(ARGV[1]) and waitingq_size < 1 then ' +
+    '     if activeq_size < tonumber(ARGV[1]) and  waitingq_size < 1 then ' +
     '       return {2, redis.call("setex", KEYS[1], ARGV[3], ARGV[4]), ' + //scenario #2
     '                redis.call("sadd", KEYS[2], ARGV[2])} ' +
     '     else ' +
@@ -51,6 +44,16 @@ redis.on('connect', function() {
 
 redis.on('ready', function() {
   log.info('redis ready');
+
+  redis.check_waiting('active:/test/url:user001', 'activeQ:/test/url',
+      'waitingQ:/test/url', 'waiting:/test/url:user001',
+      500000 /*maxActiveCount*/ , 'user001', 10 /* expireTime */ , 123 /*userContent*/ )
+    .then(result => {
+      log.debug('result: ', result);
+    })
+    .catch(e => {
+      log.error(e);
+    });
 });
 
 redis.on('error', function(error) {
@@ -68,12 +71,3 @@ redis.on('reconnecting', function(event) {
 redis.on('end', function() {
   log.info('redis end');
 });
-
-const handle = {};
-//handle['/get'] = requestHandlers.get;
-//handle['/set'] = requestHandlers.set;
-//handle['/sortedset'] = requestHandlers.sortedset;
-const Available = require('./lib/handler/Available');
-handle['/available'] = new Available(redis);
-
-server.start(router.route, handle);

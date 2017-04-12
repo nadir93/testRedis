@@ -1,7 +1,7 @@
 const loglevel = 'info';
 const Logger = require('bunyan');
 const log = new Logger.createLogger({
-  name: 'testSingle',
+  name: 'testScenario_4',
   level: loglevel,
   serializers: {
     req: Logger.stdSerializers.req
@@ -21,6 +21,32 @@ const host = '127.0.0.1';
 const port = 6379;
 const Redis = require('ioredis');
 const redis = new Redis(port, host);
+
+redis.defineCommand('check_waiting', {
+  numberOfKeys: 4,
+  lua: 'if redis.call("exists", KEYS[1]) == 1 then ' +
+    '     return {1, redis.call("expire", KEYS[1], ARGV[3])} ' + //scenario #1
+    '   else ' +
+    '     local activeq_size = redis.call("scard", KEYS[2]) ' +
+    '     local waitingq_size = redis.call("zcard", KEYS[3]) ' +
+    '     if activeq_size < tonumber(ARGV[1]) and waitingq_size < 1 then ' +
+    '       return {2, redis.call("setex", KEYS[1], ARGV[3], ARGV[4]), ' + //scenario #2
+    '                redis.call("sadd", KEYS[2], ARGV[2])} ' +
+    '     else ' +
+    '       if redis.call("exists", KEYS[4]) == 1 then ' +
+    '         return {4, redis.call("setex", KEYS[4], ARGV[3], ARGV[4]), ' + // scenario #4
+    '                 redis.call("zadd", KEYS[3], 2000000000 - redis.call("ttl", "future"), ARGV[2]), ' +
+    '                 waitingq_size + 1, ' +
+    '                 waitingq_size + 1} ' +
+    '       else ' +
+    '         return {4, redis.call("setex", KEYS[4], ARGV[3], ARGV[4]), ' + // scenario #4
+    '                 redis.call("zadd", KEYS[3], 2000000000 - redis.call("ttl", "future"), ARGV[2]), ' +
+    '                 waitingq_size + 1, ' +
+    '                 waitingq_size + 1} ' +
+    '       end ' +
+    '     end ' +
+    '   end '
+});
 
 redis.on('connect', function() {
   log.info('redis connect');
@@ -63,19 +89,20 @@ redis.on('end', function() {
 
 function init() {
   return new Promise((resolve, reject) => {
-    redis.pipeline()
-      .set('waiting:/test/url:user001', '123')
-      .sadd('activeQ:/test/url', 'user001')
-      .zadd('waitingQ:/test/url', '123', 'user001')
-      .exec()
-      .then(result => {
-        log.info('init result: ', result);
-        resolve();
-      })
-      .catch(e => {
-        log.error(e);
-        reject();
-      });
+    resolve();
+    // redis.pipeline()
+    //   //.set('waiting:/test/url:user001', '123')
+    //   //.sadd('activeQ:/test/url', 'user001')
+    //   //.zadd('waitingQ:/test/url', '123', 'user001')
+    //   .exec()
+    //   .then(result => {
+    //     log.info('init result: ', result);
+    //     resolve();
+    //   })
+    //   .catch(e => {
+    //     log.error(e);
+    //     reject();
+    //   });
   });
 }
 
@@ -83,8 +110,9 @@ function release() {
   return new Promise((resolve, reject) => {
     redis.pipeline()
       .del('waiting:/test/url:user001')
-      //.del('activeQ:/test/url')
-      //.del('waitingQ:/test/url')
+      .del('activeQ:/test/url')
+      .del('waitingQ:/test/url')
+      .del('active:/test/url:user001')
       .exec()
       .then(result => {
         log.info('release result: ', result);
@@ -98,18 +126,9 @@ function release() {
 }
 
 function getData(cb) {
-  redis.pipeline()
-    .exists('active:/test/url:user001')
-    .scard('activeQ:/test/url')
-    .exists('waiting:/test/url:user001')
-    .expire('waiting:/test/url:user001', 100)
-    .zcard('waitingQ:/test/url')
-    .zrank('waitingQ:/test/url', 'user001')
-    .exec()
-    .then(result => {
-      log.debug('pipeline result: ', result);
-      return redis.zadd('waitingQ:/test/url', +new Date(), 'user001');
-    })
+  redis.check_waiting('active:/test/url:user001', 'activeQ:/test/url',
+      'waitingQ:/test/url', 'waiting:/test/url:user001',
+      0 /*maxActiveCount*/ , 'user001', 10 /* expireTime */ , 123 /*userContent*/ )
     .then(result => {
       log.debug('result: ', result);
       receivedMsgCnt++;
