@@ -24,7 +24,7 @@ const redis = new Redis(port, host);
 
 redis.defineCommand('check_waiting', {
   numberOfKeys: 4,
-  lua: 'if redis.call("exists", KEYS[1]) == 1 then ' +
+  lua: 'if redis.call("exists", KEYS[1]) == 0 then ' +
     '     return {1, redis.call("expire", KEYS[1], ARGV[3])} ' + //scenario #1
     '   else ' +
     '     local activeq_size = redis.call("scard", KEYS[2]) ' +

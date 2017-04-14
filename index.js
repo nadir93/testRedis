@@ -73,7 +73,6 @@ const handle = {};
 //handle['/get'] = requestHandlers.get;
 //handle['/set'] = requestHandlers.set;
 //handle['/sortedset'] = requestHandlers.sortedset;
-const Available = require('./lib/handler/Available');
-handle['/available'] = new Available(redis);
+handle['/available'] = new(require('./lib/handler/Available'))(redis);
 
 server.start(router.route, handle);
